@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>سَطر | نشر خاطرة مخصصة</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #0d0d12; color: #f5f5f7; padding: 20px;
+    }
+    .card {
+      width: 100%; max-width: 480px; background: #17171f; padding: 28px;
+      border-radius: 18px; border: 1px solid #2a2a38; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    h1 { margin: 0 0 8px; font-size: 24px; text-align: center; }
+    p.sub { margin: 0 0 22px; color: #9a9ab0; font-size: 14px; text-align: center; }
+    label { display: block; margin-bottom: 8px; font-size: 14px; color: #cfcfe0; }
+    textarea, input {
+      width: 100%; background: #0f0f15; border: 1px solid #2e2e3e; color: #fff;
+      border-radius: 12px; padding: 14px; font-size: 16px; margin-bottom: 16px; outline: none;
+    }
+    textarea:focus, input:focus { border-color: #fe2c55; }
+    textarea { min-height: 130px; resize: vertical; line-height: 1.6; }
+    button {
+      width: 100%; padding: 15px; border: none; border-radius: 12px;
+      background: #fe2c55; color: #fff; font-size: 17px; font-weight: bold; cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .settings-toggle {
+      background: transparent; color: #8e8ea8; font-size: 13px; padding: 8px; margin-top: 10px;
+    }
+    .hidden { display: none; }
+    .status {
+      margin-top: 16px; padding: 12px; border-radius: 10px; font-size: 14px; text-align: center;
+    }
+    .ok { background: rgba(37, 211, 102, 0.15); color: #4ade80; }
+    .err { background: rgba(254, 44, 85, 0.15); color: #fb7185; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>سَطر • النشر الفوري</h1>
+    <p class="sub">اكتب الجملة وهتتركب على صورة (1) بالموسيقى وتترفع لتيك توك فوراً</p>
+
+    <label for="quote">الخاطرة / الجملة:</label>
+    <textarea id="quote" placeholder="اكتب جملتك هنا على سطرين أو ثلاثة..."></textarea>
+
+    <button id="sendBtn" onclick="triggerPublish()">إنشاء ورفع الفيديو الآن 🚀</button>
+
+    <button type="button" class="settings-toggle" onclick="toggleSettings()">⚙️ إعدادات الربط (تُحفظ مرة واحدة)</button>
+    <div id="settingsBox" class="hidden">
+      <label for="repo">اسم المستودع:</label>
+      <input id="repo" value="dr-moza/satr.words" />
+      <label for="pat">توكن GitHub (GH_PAT):</label>
+      <input id="pat" type="password" placeholder="ghp_xxxxxxxxxxxx" />
+    </div>
+
+    <div id="status" class="status hidden"></div>
+  </div>
+
+  <script>
+    const repoInput = document.getElementById("repo");
+    const patInput = document.getElementById("pat");
+    repoInput.value = localStorage.getItem("gh_repo") || "dr-moza/satr.words";
+    patInput.value = localStorage.getItem("gh_pat") || "";
+    if (!patInput.value) {
+      document.getElementById("settingsBox").classList.remove("hidden");
+    }
+
+    function toggleSettings() {
+      document.getElementById("settingsBox").classList.toggle("hidden");
+    }
+
+    function showStatus(msg, isOk) {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.className = "status " + (isOk ? "ok" : "err");
+    }
+
+    async function triggerPublish() {
+      const quote = document.getElementById("quote").value.trim();
+      const repo = repoInput.value.trim();
+      const pat = patInput.value.trim();
+      const btn = document.getElementById("sendBtn");
+
+      if (!quote) return showStatus("اكتب الجملة الأول!", false);
+      if (!repo || !pat) {
+        document.getElementById("settingsBox").classList.remove("hidden");
+        return showStatus("اكتب توكن GitHub الأول.", false);
+      }
+
+      localStorage.setItem("gh_repo", repo);
+      localStorage.setItem("gh_pat", pat);
+
+      btn.disabled = true;
+      btn.textContent = "جاري الإرسال...";
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/tiktok_autopilot.yml/dispatches`, {
+          method: "POST",
+          headers: {
+            "Accept": "application/vnd.github+json",
+            "Authorization": `Bearer ${pat}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            ref: "main",
+            inputs: { custom_quote: quote }
+          })
+        });
+
+        if (res.status === 204) {
+          showStatus("✅ تم الإرسال! خلال دقيقة هيوصلك إشعار الفيديو على تيك توك.", true);
+          document.getElementById("quote").value = "";
+        } else {
+          const data = await res.json().catch(() => ({}));
+          showStatus("❌ خطأ: " + (data.message || res.status), false);
+        }
+      } catch (e) {
+        showStatus("❌ تعذر الاتصال بـ GitHub.", false);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "إنشاء ورفع الفيديو الآن 🚀";
+      }
+    }
+  </script>
+</body>
+</html>
