@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>سَطر | نشر خاطرة مخصصة</title>
+  <title>النشر الفوري • TikTok Auto</title>
   <style>
     * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
     body {
@@ -41,8 +41,8 @@
 </head>
 <body>
   <div class="card">
-    <h1>سَطر • النشر الفوري</h1>
-    <p class="sub">اكتب الجملة وهتتركب على صورة (1) بالموسيقى وتترفع لتيك توك فوراً</p>
+    <h1>استوديو النشر الفوري</h1>
+    <p class="sub">اكتب الجملة وهتتركب على التصميم بالموسيقى وتترفع لتيك توك فوراً</p>
 
     <label for="quote">الخاطرة / الجملة:</label>
     <textarea id="quote" placeholder="اكتب جملتك هنا على سطرين أو ثلاثة..."></textarea>
@@ -52,19 +52,36 @@
     <button type="button" class="settings-toggle" onclick="toggleSettings()">⚙️ إعدادات الربط (تُحفظ مرة واحدة)</button>
     <div id="settingsBox" class="hidden">
       <label for="repo">اسم المستودع:</label>
-      <input id="repo" value="dr-moza/satr.words" />
-      <label for="pat">توكن GitHub (GH_PAT):</label>
-      <input id="pat" type="password" placeholder="ghp_xxxxxxxxxxxx" />
+      <input id="repo" placeholder="dr-moza/client-name" />
+      <label for="pat">كود التفعيل (Token):</label>
+      <input id="pat" type="password" placeholder="github_pat_xxxxxxxxxxxx" />
     </div>
 
     <div id="status" class="status hidden"></div>
   </div>
 
   <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const repoFromUrl = urlParams.get("repo");
+    const tokenFromUrl = urlParams.get("token");
+
     const repoInput = document.getElementById("repo");
     const patInput = document.getElementById("pat");
+
+    // إذا تم تمرير اسم المستودع في الرابط (?repo=client-name) يضبطه تلقائياً
+    if (repoFromUrl) {
+      const fullRepo = repoFromUrl.includes("/") ? repoFromUrl : `dr-moza/${repoFromUrl}`;
+      localStorage.setItem("gh_repo", fullRepo);
+    }
+    if (tokenFromUrl) {
+      localStorage.setItem("gh_pat", tokenFromUrl);
+      // إخفاء التوكن من شريط العنوان بعد حفظه لمزيد من الأمان
+      window.history.replaceState({}, document.title, window.location.pathname + (repoFromUrl ? `?repo=${repoFromUrl}` : ""));
+    }
+
     repoInput.value = localStorage.getItem("gh_repo") || "dr-moza/satr.words";
     patInput.value = localStorage.getItem("gh_pat") || "";
+
     if (!patInput.value) {
       document.getElementById("settingsBox").classList.remove("hidden");
     }
@@ -88,7 +105,7 @@
       if (!quote) return showStatus("اكتب الجملة الأول!", false);
       if (!repo || !pat) {
         document.getElementById("settingsBox").classList.remove("hidden");
-        return showStatus("اكتب توكن GitHub الأول.", false);
+        return showStatus("اكتب كود التفعيل الأول.", false);
       }
 
       localStorage.setItem("gh_repo", repo);
@@ -119,7 +136,7 @@
           showStatus("❌ خطأ: " + (data.message || res.status), false);
         }
       } catch (e) {
-        showStatus("❌ تعذر الاتصال بـ GitHub.", false);
+        showStatus("❌ تعذر الاتصال بالسيرفر.", false);
       } finally {
         btn.disabled = false;
         btn.textContent = "إنشاء ورفع الفيديو الآن 🚀";
